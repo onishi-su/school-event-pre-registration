@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+
+<meta charset="utf-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1"
+>
+
+<meta
+  http-equiv="Cache-Control"
+  content="no-cache, no-store, must-revalidate"
+>
+
+<meta http-equiv="Pragma" content="no-cache">
+
+<meta http-equiv="Expires" content="0">
+
+<title>体育祭予約</title>
+
+<style>
+
+html,
+body {
+
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+
+}
+
+iframe {
+
+  width:100%;
+  height:100vh;
+  border:none;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<iframe
+  id="app"
+  sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+></iframe>
+
+<script>
+
+const GAS_URL =
+"https://script.google.com/macros/s/AKfycbzCWMMUSp6JgiO0WWuJ95XpCIp2EWOE9N8tQcBXTlinNbrYDqW2bKUikuPWzRP6Us3ADA/exec";
+
+function loadApp() {
+
+  document.getElementById("app").src =
+    GAS_URL + "?t=" + Date.now();
+
+}
+
+loadApp();
+
+</script>
+
+</body>
+</html>
