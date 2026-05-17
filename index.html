@@ -104,7 +104,6 @@
   </div>
 
   <script>
-    // ★重要: ここをご自身の「ウェブアプリとしてデプロイした最新のGASのURL」に差し替えてください
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzj855Cj6qRvHTSA6bYtZ-vPzdrdPAqLf3j5VLnMpBs8gCfmpP3lZ6R8V9ebKCYMPSBbA/exec";
 
     // 全校生徒の名簿データを保持する変数
@@ -117,7 +116,6 @@
 
     // ページ読み込み時に受付期間のチェックと名簿データの一括取得を行う
     window.addEventListener('DOMContentLoaded', function() {
-      // 1. 受付期間チェック（GAS通信経由）
       fetch(`${GAS_API_URL}?action=getPageAvailability`)
         .then(res => res.json())
         .then(status => {
@@ -127,13 +125,10 @@
             statusMessage.style.display = 'block';
             statusMessage.innerHTML = '<strong>' + status.message + '</strong><br>公開期間：' + status.startText + ' ～ ' + status.endText + '<br>現在時刻：' + status.nowText;
             document.getElementById('reserveForm').style.display = 'none';
-            
-            // 🌟 期間外（status.isAvailable が false）のとき、注意事項の枠（infoBox）を非表示にする
             document.getElementById('infoBox').style.display = 'none';
           }
         }).catch(err => console.error("初期化エラー:", err));
 
-      // 2. 名簿データの一括事前取得（バックグラウンドで高速化のために実行）
       fetch(`${GAS_API_URL}?action=getAllClassData`)
         .then(res => res.json())
         .then(data => {
@@ -143,6 +138,14 @@
 
     function reloadPage() {
       window.location.href = window.location.origin + window.location.pathname;
+    }
+
+    // 🌟 氏名表示エリアを完全初期化する補助関数を追加
+    function resetNameDisplay() {
+      const display = document.getElementById('nameDisplay');
+      display.style.color = "#333";
+      display.innerText = "学年・組・番号を指定してください";
+      document.getElementById('hiddenName').value = "";
     }
 
     function updateClass() {
@@ -158,21 +161,23 @@
         }
       }
       document.getElementById('num').innerHTML = '<option value="">組を先に選択</option>';
-      document.getElementById('nameDisplay').innerText = "学年・組・番号を指定してください";
-      document.getElementById('hiddenName').value = "";
+      
+      // 🌟 学年が変わったら氏名を初期化
+      resetNameDisplay();
     }
 
-    // クラス名簿をスマホ内のデータから一瞬で生成（完全高速化）
     function updateNumber() {
       const grade = document.getElementById('grade').value;
       const klass = document.getElementById('klass').value;
       const numSelect = document.getElementById('num');
       
+      // 🌟 組が変わったら氏名を初期化
+      resetNameDisplay();
+      
       if (grade && klass) {
         const classKey = `${grade}-${klass}`;
         numSelect.innerHTML = '<option value="">選択してください</option>';
         
-        // 事前取得したデータがあるか確認
         if (allStudentData && allStudentData[classKey]) {
           const classInfo = allStudentData[classKey];
           if (classInfo.maxNum > 0) {
@@ -185,12 +190,10 @@
             numSelect.innerHTML = '<option value="">データなし</option>';
           }
         } else {
-          // 万が一、最初のロードが間に合っていなかった場合は従来の個別通信にフォールバック
           numSelect.innerHTML = '<option value="">読み込み中...</option>';
           fetch(`${GAS_API_URL}?action=getClassList&grade=${grade}&klass=${klass}`)
             .then(res => res.json())
             .then(data => {
-              // バックグラウンド名簿を補完
               if (!allStudentData) allStudentData = {};
               allStudentData[classKey] = data;
               
@@ -218,6 +221,12 @@
       const display = document.getElementById('nameDisplay');
       const hidden = document.getElementById('hiddenName');
 
+      // 🌟 出席番号が「選択してください（空欄）」に戻された場合の処理を追加
+      if (!num) {
+        resetNameDisplay();
+        return;
+      }
+
       const classKey = `${grade}-${klass}`;
 
       if (num && allStudentData && allStudentData[classKey] && allStudentData[classKey].classList[num]) {
@@ -243,7 +252,6 @@
       const form = document.getElementById('reserveForm');
       const formData = new FormData(form);
       
-      // 送信用パラメータの作成
       const params = new URLSearchParams();
       for (const pair of formData.entries()) {
         params.append(pair[0], pair[1]);
