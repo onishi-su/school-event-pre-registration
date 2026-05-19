@@ -14,9 +14,14 @@
     .container { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     label { font-size: 14px; font-weight: bold; display: block; margin-bottom: 8px; color: #333; }
     select, input { margin-bottom: 15px; width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
-    /* 🌟 手入力フォーム用にスタイルを少し調整 */
+    
+    /* 🌟 手入力フォーム用スタイル */
     input[type="text"] { font-weight: bold; color: #1a73e8; background: #e8f0fe; border: 1px solid #1a73e8; }
     input[type="text"]:focus { background: white; border: 2px solid #1a73e8; outline: none; }
+    
+    /* 🌟 入力不可（ロック中）のときのグレーアウト表示 */
+    input[type="text"]:disabled { background: #e0e0e0; border: 1px solid #ccc; color: #888; cursor: not-allowed; }
+    
     button { background: #1a73e8; color: white; padding: 15px; border: none; width: 100%; font-size: 18px; cursor: pointer; border-radius: 6px; font-weight: bold; }
     .info-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; color: #555; }
     #successMessage { display: none; text-align: center; }
@@ -35,9 +40,8 @@
     <div id="infoBox" class="info-box">
       <ul style="margin: 0; padding-left: 15px; list-style-type: '● ';">
         <li>事前予約受付日時：<br><span id="reservationWindow">読み込み中...</span></li>
-        <li>1家族につき1つのQRコードのみ<br>※時間差で来校する際は当日受付時お申し出ください</li>
-        <li>当日はスマートフォン等でQRコードをご提示ください。</li>
-        <li><font color="red">重複登録できないようなっているので、特に「組」・「出席番号」を間違えて入力しないようご注意ください。</font> </li>
+        <li>１家族につき1つのQRコードのみ（時間差で来校する際は当日受付時お申し出ください）</li>
+        <li>当日はスマートフォン等でQRコードをご提示ください</li>
         <li><font color="red">関係者以外に、発行されるQRコードのスクリーンショットの配布、メールの転送を禁止します。</font></li>
         <li><font color="red">その他、不正な方法で入手したものについても同様に入場をお断りする場合がございます。</font></li>
       </ul>
@@ -60,12 +64,12 @@
       </select>
 
       <label>■ 出席番号</label>
-      <select id="num" name="num" onchange="clearNameIfNeeded()" required>
+      <select id="num" name="num" onchange="toggleNameField()" required>
         <option value="">組を先に選択</option>
       </select>
 
       <label>■ お子様の氏名入力</label>
-      <input type="text" id="nameField" name="name" placeholder="例：双星 太郎（フルネームで入力）" required>
+      <input type="text" id="nameField" name="name" placeholder="←学年・組・番号を先に選択してください" disabled required>
 
       <label>■ 来場人数（保護者）</label>
       <select id="count" name="count" required>
@@ -156,8 +160,8 @@
       }
       document.getElementById('num').innerHTML = '<option value="">組を先に選択</option>';
       
-      // 🌟 学年が変わったら氏名入力欄をクリア
-      document.getElementById('nameField').value = "";
+      // 学年が変わったら氏名入力欄をロック＆クリア
+      lockAndClearNameField();
     }
 
     function updateNumber() {
@@ -165,8 +169,8 @@
       const klass = document.getElementById('klass').value;
       const numSelect = document.getElementById('num');
       
-      // 🌟 組が変わったら氏名入力欄をクリア
-      document.getElementById('nameField').value = "";
+      // 組が変わったら氏名入力欄をロック＆クリア
+      lockAndClearNameField();
       
       if (grade && klass) {
         const classKey = `${grade}-${klass}`;
@@ -208,18 +212,42 @@
       }
     }
 
-    // 🌟 出席番号が未選択に戻されたら名前欄をクリアする補助処理
-    function clearNameIfNeeded() {
+    // 🌟 要件①：年・組・番号の選択状況に応じて、名前欄のロック/解除を切り替える関数
+    function toggleNameField() {
+      const grade = document.getElementById('grade').value;
+      const klass = document.getElementById('klass').value;
       const num = document.getElementById('num').value;
-      if (!num) {
-        document.getElementById('nameField').value = "";
+      const nameField = document.getElementById('nameField');
+      
+      if (grade && klass && num) {
+        nameField.disabled = false; // ロック解除
+        nameField.placeholder = "例：双星 太郎（フルネームで入力）";
+      } else {
+        lockAndClearNameField();
       }
     }
 
+    // 氏名欄を初期状態（ロック＆空っぽ）に戻す補助関数
+    function lockAndClearNameField() {
+      const nameField = document.getElementById('nameField');
+      nameField.value = "";
+      nameField.disabled = true; // ロック
+      nameField.placeholder = "←学年・組・番号を先に選択してください";
+    }
+
     function submitForm(btn) {
+      // 🌟 要件②：各入力項目の値を取得してチェック
+      const grade = document.getElementById('grade').value;
+      const klass = document.getElementById('klass').value;
+      const num = document.getElementById('num').value;
       const name = document.getElementById('nameField').value.trim();
       const email = document.getElementById('emailField').value.trim();
-      if (!name || !email) { alert("お子様の氏名を入力し、メールアドレスを入力してください。"); return; }
+      
+      // どれか1つでも空、またはロック（disabled）されたままの場合に指定のエラーを表示
+      if (!grade || !klass || !num || !name || !email) { 
+        alert("入力不備があります。全て入力項目が入力されているかご確認ください。"); 
+        return; 
+      }
 
       btn.disabled = true;
       btn.innerHTML = "送信中...";
